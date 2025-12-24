@@ -21,7 +21,6 @@ pub struct GdiRenderer {
 }
 
 impl GdiRenderer {
-    // UPDATED: Now accepts base_w and base_h (the native resolution of the video)
     pub fn new(screen_w: i32, screen_h: i32, base_w: u16, base_h: u16) -> Self {
         unsafe {
             let screen_dc = GetDC(HWND(0));
@@ -31,7 +30,7 @@ impl GdiRenderer {
                 bmiHeader: BITMAPINFOHEADER {
                     biSize: mem::size_of::<BITMAPINFOHEADER>() as u32,
                     biWidth: screen_w,
-                    biHeight: -screen_h, // Top-down
+                    biHeight: -screen_h,
                     biPlanes: 1,
                     biBitCount: 32,
                     biCompression: BI_RGB.0,
@@ -56,7 +55,7 @@ impl GdiRenderer {
                 buffer,
                 screen_w,
                 screen_h,
-                // UPDATED: Calculate scale dynamically based on arguments
+
                 scale_x: screen_w as f64 / base_w as f64,
                 scale_y: screen_h as f64 / base_h as f64,
             }

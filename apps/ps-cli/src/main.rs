@@ -12,75 +12,92 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// 1. Download & Prep Video (Interactive)
-    /// Downloads YouTube video, converts to Lossless MKV, extracts Audio.
+    // 1. Download
     Download {
-        /// YouTube URL
         #[arg(short, long)]
         url: Option<String>,
 
-        /// Target Resolution (e.g., "1080p", "1440p")
         #[arg(short, long)]
         resolution: Option<String>,
 
-        /// Target FPS (e.g., 30, 60, 144)
         #[arg(short, long)]
         fps: Option<u32>,
 
-        /// Project folder name
         #[arg(short, long)]
         project: Option<String>,
     },
-    /// 2. Convert Video to BIN
-    /// Runs the Snowplow algorithm to generate optimized .bin data.
+
+    // 2. Convert
     Convert {
-        /// Project folder name (scans 'assets/' if missing)
         #[arg(short, long)]
         project: Option<String>,
 
-        /// Resolutions (e.g. "1080p,720p"). Prompts if missing.
         #[arg(short, long)]
         resolutions: Option<String>,
 
-        /// Force GPU usage (flag only)
         #[arg(long, default_value_t = false)]
         gpu: bool,
     },
 
-    /// 3. Visualize a generated .bin file
-    /// Opens a window to play back the .bin file to verify data integrity.
-    Debug {
-        /// Project folder name
-        #[arg(short, long)]
-        project: Option<String>,
-
-        /// Specific .bin file name (e.g. "bad_apple_1080p.bin")
-        #[arg(short, long)]
-        file: Option<String>,
-    },
-
-    /// 4. Compile Final Executables (Release)
-    /// Compiles the Runner for selected resolutions and moves them to 'dist/'.
+    // 3. Build
     Build {
-        /// Filter by Project Name (e.g. "bad_apple")
         #[arg(short, long)]
         project: Option<String>,
 
-        /// Filter by Resolutions (e.g. "1080p,720p")
         #[arg(short, long)]
         resolutions: Option<String>,
 
-        /// Build ALL valid targets found in assets
         #[arg(short, long, default_value_t = false)]
         all: bool,
     },
 
-    /// 5. Run & Watchdog
-    /// Launches a built executable and auto-restarts it if it closes/crashes.
+    // 4. Run
     Run {
-        /// Name of the target to run (e.g. "bad_apple"). Auto-matches if unique.
         #[arg(short, long)]
         target: Option<String>,
+
+        #[arg(short, long, default_value_t = false)]
+        silent: bool,
+
+        #[arg(short, long, default_value_t = false)]
+        detach: bool,
+    },
+
+    // 5. Debug
+    Debug {
+        #[arg(short, long)]
+        project: Option<String>,
+
+        #[arg(short, long)]
+        file: Option<String>,
+    },
+
+    // 6. ALL (Pipeline)
+    /// Runs Download -> Convert -> Build -> Run in sequence
+    All {
+        // --- Downloader Args ---
+        #[arg(short, long)]
+        url: Option<String>,
+
+        #[arg(short, long)]
+        resolution: Option<String>,
+
+        #[arg(short, long)]
+        fps: Option<u32>,
+
+        #[arg(short, long)]
+        project: Option<String>, // Critical for linking steps
+
+        // --- Converter Args ---
+        #[arg(long, default_value_t = false)]
+        gpu: bool,
+
+        // --- Runner Args ---
+        #[arg(short, long, default_value_t = false)]
+        silent: bool,
+
+        #[arg(short, long, default_value_t = false)]
+        detach: bool,
     },
 }
 
@@ -88,89 +105,147 @@ fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
+        // [1] DOWNLOAD
         Commands::Download {
             url,
             resolution,
             fps,
             project,
         } => {
-            println!("--- [1/4] Downloader ---");
-            if let Err(e) = downloader::check_dependencies() {
-                eprintln!("❌ Dependency Missing: {}", e);
-                return;
-            }
-
-            // Create a config object to pass to the function
             let args = downloader::DownloadArgs {
                 url: url.clone(),
                 resolution: resolution.clone(),
                 fps: *fps,
                 project_name: project.clone(),
             };
-
-            if let Err(e) = downloader::run(args) {
+            if let Err(e) = downloader::run_cli(args) {
                 eprintln!("❌ Download Error: {}", e);
             }
         }
 
+        // [2] CONVERT
         Commands::Convert {
             project,
             resolutions,
             gpu,
         } => {
-            println!("--- [2/4] Converter ---");
-
-            // Create config object with Optional fields
             let args = converter::ConvertArgs {
                 project_name: project.clone(),
                 resolutions: resolutions.clone(),
                 use_gpu: *gpu,
             };
-
-            if let Err(e) = converter::run(args) {
+            if let Err(e) = converter::run_cli(args) {
                 eprintln!("❌ Conversion Error: {}", e);
             }
         }
 
-        Commands::Debug { project, file } => {
-            println!("--- [3/4] Debugger ---");
-
-            let args = debugger::DebugArgs {
-                project_name: project.clone(),
-                file_name: file.clone(),
-            };
-
-            if let Err(e) = debugger::run(args) {
-                eprintln!("❌ Debugger Error: {}", e);
-            }
-        }
-
+        // [3] BUILD
         Commands::Build {
             project,
             resolutions,
             all,
         } => {
-            println!("--- [4/4] Builder ---");
-
             let args = builder::BuildArgs {
                 project_name: project.clone(),
                 resolutions: resolutions.clone(),
                 build_all: *all,
             };
-
-            if let Err(e) = builder::run(args) {
+            if let Err(e) = builder::run_cli(args) {
                 eprintln!("❌ Build Error: {}", e);
             }
         }
 
-        Commands::Run { target } => {
-            println!("--- [5/5] Watchdog Runner ---");
+        // [4] RUNNER
+        Commands::Run {
+            target,
+            silent,
+            detach,
+        } => {
             let args = runner::RunArgs {
                 target: target.clone(),
+                silent: *silent,
+                detach: *detach,
             };
-            if let Err(e) = runner::run(args) {
+            if let Err(e) = runner::run_cli(args) {
                 eprintln!("❌ Runner Error: {}", e);
             }
+        }
+
+        // [5] DEBUG
+        Commands::Debug { project, file } => {
+            let args = debugger::DebugArgs {
+                project_name: project.clone(),
+                file_name: file.clone(),
+            };
+            if let Err(e) = debugger::run_cli(args) {
+                eprintln!("❌ Debugger Error: {}", e);
+            }
+        }
+
+        // [6] ALL (The Pipeline)
+        Commands::All {
+            url,
+            resolution,
+            fps,
+            project,
+            gpu,
+            silent,
+            detach,
+        } => {
+            println!("🚀 STARTING PIPELINE (All-in-One)");
+
+            // Step 1: Download
+            println!("\n▶ STEP 1: DOWNLOAD");
+            let dl_args = downloader::DownloadArgs {
+                url: url.clone(),
+                resolution: resolution.clone(),
+                fps: *fps,
+                project_name: project.clone(),
+            };
+            if let Err(e) = downloader::run_cli(dl_args) {
+                eprintln!("❌ Pipeline stopped at Download: {}", e);
+                return;
+            }
+
+            // Step 2: Convert
+            // We reuse the project name (if provided) to auto-select the project
+            println!("\n▶ STEP 2: CONVERT");
+            let cv_args = converter::ConvertArgs {
+                project_name: project.clone(),
+                resolutions: resolution.clone(), // Use same resolution preference
+                use_gpu: *gpu,
+            };
+            if let Err(e) = converter::run_cli(cv_args) {
+                eprintln!("❌ Pipeline stopped at Conversion: {}", e);
+                return;
+            }
+
+            // Step 3: Build
+            println!("\n▶ STEP 3: BUILD");
+            let bd_args = builder::BuildArgs {
+                project_name: project.clone(),
+                resolutions: resolution.clone(),
+                build_all: false,
+            };
+            if let Err(e) = builder::run_cli(bd_args) {
+                eprintln!("❌ Pipeline stopped at Build: {}", e);
+                return;
+            }
+
+            // Step 4: Run
+            println!("\n▶ STEP 4: RUN");
+            // If project name is known, pass it as target hint to find the right EXE
+            let run_args = runner::RunArgs {
+                target: project.clone(),
+                silent: *silent,
+                detach: *detach,
+            };
+            if let Err(e) = runner::run_cli(run_args) {
+                eprintln!("❌ Pipeline stopped at Runner: {}", e);
+                return;
+            }
+
+            println!("\n✨ PIPELINE COMPLETE ✨");
         }
     }
 }

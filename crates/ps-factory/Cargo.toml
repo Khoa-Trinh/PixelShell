@@ -5,11 +5,18 @@ edition = "2021"
 
 [dependencies]
 ps-core = { path = "../ps-core" }
-anyhow = "1.0"           # Easy error handling
+anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"       # For parsing ffprobe output
-dialoguer = "0.11"       # For the interactive menus
-which = "6.0"            # To check if ffmpeg/yt-dlp exist
+serde_json = "1.0"
+dialoguer = "0.11"
+which = "6.0"
 indicatif = "0.17"
 minifb = "0.24"
 byteorder = "1.5"
+rayon = "1.8"
+crossbeam-channel = "0.5"
+windows = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_System_Console",
+    "Win32_UI_WindowsAndMessaging"
+]}

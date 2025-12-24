@@ -4,8 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# Command Line Argument Parser
 clap = { version = "4.4", features = ["derive"] }
-
-# Link to your local factory crate (Where the heavy lifting happens)
 ps-factory = { path = "../../crates/ps-factory" }

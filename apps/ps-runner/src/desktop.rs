@@ -57,7 +57,7 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -
             PostQuitMessage(0);
             LRESULT(0)
         }
-        WM_ERASEBKGND => LRESULT(1), // Prevent flickering
+        WM_ERASEBKGND => LRESULT(1),
         _ => DefWindowProcA(hwnd, msg, w, l),
     }
 }

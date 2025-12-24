@@ -4,7 +4,7 @@ members = [
     "crates/ps-core",
     "crates/ps-factory",
     "apps/ps-cli",
-    # "apps/ps-gui",
+    "apps/ps-gui",
     "apps/ps-runner",
 ]
 

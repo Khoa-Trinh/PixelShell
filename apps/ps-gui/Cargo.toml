@@ -2,3 +2,13 @@
 name = "ps-gui"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
+eframe = "0.27"  # The GUI Framework
+egui = "0.27"
+rfd = "0.14"     # File Dialogs
+anyhow = "1.0"
+walkdir = "2.4"
+
+# Link to your logic
+ps-factory = { path = "../../crates/ps-factory" }

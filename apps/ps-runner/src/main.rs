@@ -2,7 +2,7 @@
 
 mod audio;
 mod desktop;
-mod payload; // <--- ADD THIS
+mod payload;
 mod renderer;
 
 use kira::{
@@ -24,10 +24,8 @@ use windows::Win32::{
 use ps_core::{file_header, PixelRect};
 
 fn main() {
-    // 1. Load Assets dynamically from the EXE itself
     let assets = payload::load();
 
-    // We use references slice (&[u8]) to keep compatibility with existing code
     let bin_data: &'static [u8] = Box::leak(assets.video_data.into_boxed_slice());
     let audio_data: &'static [u8] = Box::leak(assets.audio_data.into_boxed_slice());
     let video_width = assets.width;
@@ -39,24 +37,18 @@ fn main() {
         let _ = SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
         let audio_sys = audio::AudioSystem::new();
 
-        // 2. Process Video Header
         let (fps_bytes, frames_bytes) = bin_data.split_at(file_header::DATA_START);
         let video_fps = u16::from_le_bytes(fps_bytes[0..2].try_into().unwrap()) as f64;
 
-        // 3. Cast raw bytes to PixelRect
         let frames: &[PixelRect] = slice::from_raw_parts(
             frames_bytes.as_ptr() as *const _,
             frames_bytes.len() / mem::size_of::<PixelRect>(),
         );
         let mut frames_iter = frames.iter();
 
-        // 4. Create Window (Pass dynamic width/height)
-        // NOTE: Ensure desktop::create_overlay_window() is updated to accept w/h if it hardcoded them before!
-        // If it was reading config::BASE_WIDTH, change it to accept arguments.
         let (hwnd, w, h) = desktop::create_overlay_window();
         let mut renderer = renderer::GdiRenderer::new(w, h, video_width, video_height);
 
-        // 5. Setup Audio
         let mut audio_manager =
             AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap();
         let clock = audio_manager
@@ -64,7 +56,7 @@ fn main() {
             .unwrap();
 
         let sound_data = StreamingSoundData::from_cursor(
-            Cursor::new(audio_data), // Cursor wraps the Vec reference
+            Cursor::new(audio_data),
             StreamingSoundSettings::new().start_time(clock.time()),
         )
         .unwrap();
@@ -75,7 +67,6 @@ fn main() {
 
         let mut next_tick = clock.time().ticks;
 
-        // 6. Main Loop
         'main_loop: loop {
             if let Some(ref v) = volume_ctl {
                 let _ = v.SetMasterVolumeLevelScalar(0.2, ptr::null());
